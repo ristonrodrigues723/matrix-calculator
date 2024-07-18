@@ -1,108 +1,127 @@
-let matrixCount = 0;
-let operationCount = 0;
+const matrixLetters = ['A', 'B', 'C', 'D', 'E'];
+const matrices = {};
 
-function addMatrix() {
-    matrixCount++;
-    const matrixDiv = document.createElement('div');
-    matrixDiv.className = 'matrix-input';
-    matrixDiv.innerHTML = `
-        <h3>Matrix ${matrixCount}</h3>
-        <div class="matrix" id="matrix${matrixCount}">
-            <input type="number" value="0">
-            <input type="number" value="0">
-            <input type="number" value="0">
-            <input type="number" value="0">
-        </div>
-    `;
-    document.getElementById('matricesContainer').appendChild(matrixDiv);
-    updateOperationSelects();
-}
-
-function addOperation() {
-    operationCount++;
-    const opDiv = document.createElement('div');
-    opDiv.innerHTML = `
-        <select id="matrix1_${operationCount}">
-            ${generateMatrixOptions()}
-        </select>
-        <select id="operation_${operationCount}">
-            <option value="add">+</option>
-            <option value="multiply">×</option>
-        </select>
-        <select id="matrix2_${operationCount}">
-            ${generateMatrixOptions()}
-        </select>
-    `;
-    document.getElementById('operationsContainer').appendChild(opDiv);
-}
-
-function generateMatrixOptions() {
-    let options = '';
-    for (let i = 1; i <= matrixCount; i++) {
-        options += `<option value="${i}">Matrix ${i}</option>`;
-    }
-    return options;
-}
-
-function updateOperationSelects() {
-    const selects = document.querySelectorAll('#operationsContainer select');
-    selects.forEach(select => {
-        if (select.id.startsWith('matrix')) {
-            const currentValue = select.value;
-            select.innerHTML = generateMatrixOptions();
-            if (currentValue <= matrixCount) {
-                select.value = currentValue;
-            }
-        }
+function initializeMatrixInputs() {
+    const container = document.getElementById('matrixInputs');
+    matrixLetters.forEach(letter => {
+        const div = document.createElement('div');
+        div.className = 'matrix-input';
+        div.innerHTML = `
+            <h3>Matrix ${letter}</h3>
+            <label>Rows: <input type="number" id="rows_${letter}" min="1" max="5" value="2"></label>
+            <label>Columns: <input type="number" id="cols_${letter}" min="1" max="5" value="2"></label>
+            <button onclick="createMatrixGrid('${letter}')">Create Matrix</button>
+            <div id="matrix_${letter}"></div>
+        `;
+        container.appendChild(div);
     });
 }
 
-function getMatrixValues(matrixId) {
-    const inputs = document.querySelectorAll(`#${matrixId} input`);
+function createMatrixGrid(letter) {
+    const rows = parseInt(document.getElementById(`rows_${letter}`).value);
+    const cols = parseInt(document.getElementById(`cols_${letter}`).value);
+    const matrixDiv = document.getElementById(`matrix_${letter}`);
+    const grid = document.createElement('div');
+    grid.className = 'matrix-grid';
+    grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    
+    for (let i = 0; i < rows * cols; i++) {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = '0';
+        grid.appendChild(input);
+    }
+    
+    matrixDiv.innerHTML = '';
+    matrixDiv.appendChild(grid);
+}
+
+function getMatrixValues(letter) {
+    const inputs = document.querySelectorAll(`#matrix_${letter} input`);
     return Array.from(inputs).map(input => parseFloat(input.value));
 }
 
-function addMatrices(matrix1, matrix2) {
-    return matrix1.map((value, index) => value + matrix2[index]);
-}
-
-function multiplyMatrices(matrix1, matrix2) {
-    return [
-        matrix1[0] * matrix2[0] + matrix1[1] * matrix2[2],
-        matrix1[0] * matrix2[1] + matrix1[1] * matrix2[3],
-        matrix1[2] * matrix2[0] + matrix1[3] * matrix2[2],
-        matrix1[2] * matrix2[1] + matrix1[3] * matrix2[3]
-    ];
-}
-
 function calculateResult() {
-    if (matrixCount === 0 || operationCount === 0) {
-        alert("Please add at least one matrix and one operation.");
-        return;
-    }
+    const equation = document.getElementById('equation').value;
+    matrixLetters.forEach(letter => {
+        if (equation.includes(letter)) {
+            matrices[letter] = getMatrixValues(letter);
+        }
+    });
 
+    try {
+        const result = evaluateEquation(equation);
+        displayResult(result);
+    } catch (error) {
+        document.getElementById('result').textContent = 'Error: ' + error.message;
+    }
+}
+
+function evaluateEquation(equation) {
+    const tokens = equation.match(/[A-E]|\+|\*|-/g);
     let result = null;
-    for (let i = 1; i <= operationCount; i++) {
-        const matrix1Index = document.getElementById(`matrix1_${i}`).value;
-        const matrix2Index = document.getElementById(`matrix2_${i}`).value;
-        const operation = document.getElementById(`operation_${i}`).value;
+    let currentOp = '+';
 
-        const matrix1 = getMatrixValues(`matrix${matrix1Index}`);
-        const matrix2 = getMatrixValues(`matrix${matrix2Index}`);
-
-        const operationResult = operation === 'add' ? addMatrices(matrix1, matrix2) : multiplyMatrices(matrix1, matrix2);
-
-        result = result ? (operation === 'add' ? addMatrices(result, operationResult) : multiplyMatrices(result, operationResult)) : operationResult;
+    for (let token of tokens) {
+        if (token in matrices) {
+            const matrix = matrices[token];
+            if (!result) {
+                result = matrix;
+            } else {
+                switch (currentOp) {
+                    case '+': result = addMatrices(result, matrix); break;
+                    case '-': result = subtractMatrices(result, matrix); break;
+                    case '*': result = multiplyMatrices(result, matrix); break;
+                }
+            }
+        } else if (['+', '-', '*'].includes(token)) {
+            currentOp = token;
+        }
     }
 
-    displayResult(result);
+    return result;
+}
+
+function addMatrices(a, b) {
+    return a.map((val, i) => val + b[i]);
+}
+
+function subtractMatrices(a, b) {
+    return a.map((val, i) => val - b[i]);
+}
+
+function multiplyMatrices(a, b) {
+    const rowsA = Math.sqrt(a.length);
+    const colsA = rowsA;
+    const rowsB = Math.sqrt(b.length);
+    const colsB = rowsB;
+
+    if (colsA !== rowsB) {
+        throw new Error('Matrices cannot be multiplied');
+    }
+
+    let result = [];
+    for (let i = 0; i < rowsA; i++) {
+        for (let j = 0; j < colsB; j++) {
+            let sum = 0;
+            for (let k = 0; k < colsA; k++) {
+                sum += a[i * colsA + k] * b[k * colsB + j];
+            }
+            result.push(sum);
+        }
+    }
+    return result;
 }
 
 function displayResult(result) {
     const resultDiv = document.getElementById('result');
-    resultDiv.innerHTML = `Result:<br>${result[0]} ${result[1]}<br>${result[2]} ${result[3]}`;
+    const size = Math.sqrt(result.length);
+    let html = '<h3>Result:</h3><div class="matrix-grid" style="grid-template-columns: repeat(' + size + ', 1fr);">';
+    result.forEach(val => {
+        html += `<input type="number" value="${val}" readonly>`;
+    });
+    html += '</div>';
+    resultDiv.innerHTML = html;
 }
 
-// Add the first matrix and operation by default
-addMatrix();
-addOperation();
+initializeMatrixInputs();

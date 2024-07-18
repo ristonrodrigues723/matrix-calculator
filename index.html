@@ -3,24 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Multiple Matrix Calculator</title>
+    <title>Matrix Calculator</title>
     <link rel="stylesheet" href="mc.css">
 </head>
 <body>
     <div class="container">
-        <h2>Advanced Multiple Matrix Calculator</h2>
-        <div id="matricesContainer" class="matrices-container">
-            <!-- Matrices will be added here dynamically -->
-        </div>
-        <button onclick="addMatrix()">Add Matrix</button>
-        <div id="operations">
-            <h3>Operations</h3>
-            <div id="operationsContainer"></div>
-            <button onclick="addOperation()">Add Operation</button>
-        </div>
-        <button onclick="calculateResult()">Calculate Result</button>
-        <div id="result"></div>
+        <h2>Matrix Calculator</h2>
+        <h1>Matrix Calculator with Letter Assignments</h1>
+    <div id="matrixInputs"></div>
+    <div>
+        <label for="equation">Enter equation (e.g., A + B * C):</label>
+        <input type="text" id="equation" placeholder="A + B * C">
+        <button onclick="calculateResult()">Calculate</button>
     </div>
+    <div id="result"></div>
+           
+    </div>
+    
     <script src="mc.js"></script>
 </body>
 </html>
