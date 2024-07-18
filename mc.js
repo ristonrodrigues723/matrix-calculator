@@ -105,3 +105,4 @@ function displayResult(result) {
 
 // Add the first matrix and operation by default
 addMatrix();
+addOperation();
