@@ -11,7 +11,7 @@ function initializeMatrixInputs() {
             <label>Rows: <input type="number" id="rows_${letter}" min="1" max="5" value="2"></label>
             <label>Columns: <input type="number" id="cols_${letter}" min="1" max="5" value="2"></label>
             <button onclick="createMatrixGrid('${letter}')">Create Matrix</button>
-            <button onclick="addInvertedMatrix('${letter}')">Add Inverted</button>
+            <button onclick="addInverseMatrix('${letter}')">Add Inverse</button>
             <div id="matrix_${letter}"></div>
         `;
         container.appendChild(div);
@@ -79,6 +79,53 @@ function addIdentityMatrix(size) {
     equation.value += (equation.value ? ' + ' : '') + identitySymbol;
     matrices[identitySymbol] = createIdentityMatrix(size);
 }
+// 
+function calculateDeterminant(matrix) {
+    const size = Math.sqrt(matrix.length);
+    if (size === 2) {
+        return matrix[0] * matrix[3] - matrix[1] * matrix[2];
+    } else if (size === 3) {
+        return matrix[0] * (matrix[4] * matrix[8] - matrix[5] * matrix[7]) -
+               matrix[1] * (matrix[3] * matrix[8] - matrix[5] * matrix[6]) +
+               matrix[2] * (matrix[3] * matrix[7] - matrix[4] * matrix[6]);
+    }
+    throw new Error('Inverse calculation is only supported for 2x2 and 3x3 matrices');
+}
+
+// Add this function to calculate the inverse of a matrix
+function calculateInverse(matrix) {
+    const size = Math.sqrt(matrix.length);
+    const det = calculateDeterminant(matrix);
+    
+    if (Math.abs(det) < 1e-6) {
+        throw new Error('Matrix is not invertible');
+    }
+
+    if (size === 2) {
+        return [
+            matrix[3] / det, -matrix[1] / det,
+            -matrix[2] / det, matrix[0] / det
+        ];
+    } else if (size === 3) {
+        const inv = [];
+        inv[0] = (matrix[4] * matrix[8] - matrix[5] * matrix[7]) / det;
+        inv[1] = (matrix[2] * matrix[7] - matrix[1] * matrix[8]) / det;
+        inv[2] = (matrix[1] * matrix[5] - matrix[2] * matrix[4]) / det;
+        inv[3] = (matrix[5] * matrix[6] - matrix[3] * matrix[8]) / det;
+        inv[4] = (matrix[0] * matrix[8] - matrix[2] * matrix[6]) / det;
+        inv[5] = (matrix[2] * matrix[3] - matrix[0] * matrix[5]) / det;
+        inv[6] = (matrix[3] * matrix[7] - matrix[4] * matrix[6]) / det;
+        inv[7] = (matrix[1] * matrix[6] - matrix[0] * matrix[7]) / det;
+        inv[8] = (matrix[0] * matrix[4] - matrix[1] * matrix[3]) / det;
+        return inv;
+    }
+    throw new Error('Inverse calculation is only supported for 2x2 and 3x3 matrices');
+}
+function addInverseMatrix(letter) {
+    const equation = document.getElementById('equation');
+    equation.value += (equation.value ? ' + ' : '') + `inv(${letter})`;
+}
+
 
 function calculateResult() {
     const equation = document.getElementById('equation').value;
@@ -124,7 +171,7 @@ function addInversionFunction() {
 }
 
 function evaluateEquation(equation) {
-    const tokens = equation.match(/[A-C]|inv\([A-C]\)|I[23]|\+|\*|-/g);
+    const tokens = equation.match(/[A-C]|I[23]|\+|\*|-|inv\([A-C]\)/g);
     let result = null;
     let currentOp = '+';
 
@@ -134,47 +181,26 @@ function evaluateEquation(equation) {
     for (let i = 0; i < tokens.length; i++) {
         const token = tokens[i];
         if (token in matrices) {
-            const matrix = matrices[token];
-            if (!result) {
-                result = matrix;
-                displayStep(calculationSteps, `Step 1: Start with Matrix ${token}`, matrix);
-            } else {
-                switch (currentOp) {
-                    case '+': 
-                        result = addMatrices(result, matrix); 
-                        displayStep(calculationSteps, `Step ${i + 1}: Add Matrix ${token}`, result);
-                        break;
-                    case '-': 
-                        result = subtractMatrices(result, matrix); 
-                        displayStep(calculationSteps, `Step ${i + 1}: Subtract Matrix ${token}`, result);
-                        break;
-                    case '*': 
-                        result = multiplyMatrices(result, matrix); 
-                        displayStep(calculationSteps, `Step ${i + 1}: Multiply by Matrix ${token}`, result);
-                        break;
-                }
-            }
-        } else if (token.startsWith('inv(') && token.endsWith(')')) {
+            // ... (existing code for regular matrices)
+        } else if (token.startsWith('inv(')) {
             const matrixLetter = token.charAt(4);
-            if (!(matrixLetter in matrices)) {
-                throw new Error(`Matrix ${matrixLetter} is not defined`);
-            }
-            const matrix = invertMatrix(matrices[matrixLetter]);
+            const matrix = matrices[matrixLetter];
+            const inverseMatrix = calculateInverse(matrix);
             if (!result) {
-                result = matrix;
-                displayStep(calculationSteps, `Step ${i + 1}: Start with Inverse of Matrix ${matrixLetter}`, matrix);
+                result = inverseMatrix;
+                displayStep(calculationSteps, `Step ${i + 1}: Start with Inverse of Matrix ${matrixLetter}`, inverseMatrix);
             } else {
                 switch (currentOp) {
                     case '+': 
-                        result = addMatrices(result, matrix); 
+                        result = addMatrices(result, inverseMatrix);
                         displayStep(calculationSteps, `Step ${i + 1}: Add Inverse of Matrix ${matrixLetter}`, result);
                         break;
                     case '-': 
-                        result = subtractMatrices(result, matrix); 
+                        result = subtractMatrices(result, inverseMatrix);
                         displayStep(calculationSteps, `Step ${i + 1}: Subtract Inverse of Matrix ${matrixLetter}`, result);
                         break;
                     case '*': 
-                        result = multiplyMatrices(result, matrix); 
+                        result = multiplyMatrices(result, inverseMatrix);
                         displayStep(calculationSteps, `Step ${i + 1}: Multiply by Inverse of Matrix ${matrixLetter}`, result);
                         break;
                 }
