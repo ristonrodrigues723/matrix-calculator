@@ -1,4 +1,4 @@
-const matrixLetters = ['A', 'B', 'C', 'D', 'E'];
+const matrixLetters = ['A', 'B', 'C'];
 const matrices = {};
 
 function initializeMatrixInputs() {
@@ -34,6 +34,9 @@ function createMatrixGrid(letter) {
     
     matrixDiv.innerHTML = '';
     matrixDiv.appendChild(grid);
+    
+    // Add animation
+    grid.style.animation = 'fadeIn 0.5s';
 }
 
 function getMatrixValues(letter) {
@@ -58,20 +61,34 @@ function calculateResult() {
 }
 
 function evaluateEquation(equation) {
-    const tokens = equation.match(/[A-E]|\+|\*|-/g);
+    const tokens = equation.match(/[A-C]|\+|\*|-/g);
     let result = null;
     let currentOp = '+';
 
-    for (let token of tokens) {
+    const calculationSteps = document.getElementById('calculationSteps');
+    calculationSteps.innerHTML = '';
+
+    for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
         if (token in matrices) {
             const matrix = matrices[token];
             if (!result) {
                 result = matrix;
+                displayStep(calculationSteps, `Step 1: Start with Matrix ${token}`, matrix);
             } else {
                 switch (currentOp) {
-                    case '+': result = addMatrices(result, matrix); break;
-                    case '-': result = subtractMatrices(result, matrix); break;
-                    case '*': result = multiplyMatrices(result, matrix); break;
+                    case '+': 
+                        result = addMatrices(result, matrix); 
+                        displayStep(calculationSteps, `Step ${i}: Add Matrix ${token}`, result);
+                        break;
+                    case '-': 
+                        result = subtractMatrices(result, matrix); 
+                        displayStep(calculationSteps, `Step ${i}: Subtract Matrix ${token}`, result);
+                        break;
+                    case '*': 
+                        result = multiplyMatrices(result, matrix); 
+                        displayStep(calculationSteps, `Step ${i}: Multiply by Matrix ${token}`, result);
+                        break;
                 }
             }
         } else if (['+', '-', '*'].includes(token)) {
@@ -80,6 +97,33 @@ function evaluateEquation(equation) {
     }
 
     return result;
+}
+
+function displayStep(container, stepText, matrix) {
+    const stepDiv = document.createElement('div');
+    stepDiv.className = 'calculation-step';
+    stepDiv.innerHTML = `<h4>${stepText}</h4>`;
+    const matrixDiv = createMatrixDisplay(matrix);
+    stepDiv.appendChild(matrixDiv);
+    container.appendChild(stepDiv);
+    
+    // Add animation
+    stepDiv.style.animation = 'slideIn 0.5s';
+}
+
+function createMatrixDisplay(matrix) {
+    const size = Math.sqrt(matrix.length);
+    const matrixDiv = document.createElement('div');
+    matrixDiv.className = 'matrix-grid';
+    matrixDiv.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+    matrix.forEach(val => {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = val;
+        input.readOnly = true;
+        matrixDiv.appendChild(input);
+    });
+    return matrixDiv;
 }
 
 function addMatrices(a, b) {
