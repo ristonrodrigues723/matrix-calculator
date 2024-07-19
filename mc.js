@@ -170,6 +170,7 @@ function addInversionFunction() {
     equation.focus();
 }
 
+// Main calculation function
 function evaluateEquation(equation) {
     const tokens = equation.match(/[A-C]|I[23]|\+|\*|-|inv\([A-C]\)/g);
     let result = null;
@@ -180,38 +181,45 @@ function evaluateEquation(equation) {
 
     for (let i = 0; i < tokens.length; i++) {
         const token = tokens[i];
+        let currentMatrix;
+
         if (token in matrices) {
-            // ... (existing code for regular matrices)
+            currentMatrix = matrices[token];
         } else if (token.startsWith('inv(')) {
             const matrixLetter = token.charAt(4);
             const matrix = matrices[matrixLetter];
-            const inverseMatrix = calculateInverse(matrix);
-            if (!result) {
-                result = inverseMatrix;
-                displayStep(calculationSteps, `Step ${i + 1}: Start with Inverse of Matrix ${matrixLetter}`, inverseMatrix);
-            } else {
-                switch (currentOp) {
-                    case '+': 
-                        result = addMatrices(result, inverseMatrix);
-                        displayStep(calculationSteps, `Step ${i + 1}: Add Inverse of Matrix ${matrixLetter}`, result);
-                        break;
-                    case '-': 
-                        result = subtractMatrices(result, inverseMatrix);
-                        displayStep(calculationSteps, `Step ${i + 1}: Subtract Inverse of Matrix ${matrixLetter}`, result);
-                        break;
-                    case '*': 
-                        result = multiplyMatrices(result, inverseMatrix);
-                        displayStep(calculationSteps, `Step ${i + 1}: Multiply by Inverse of Matrix ${matrixLetter}`, result);
-                        break;
-                }
-            }
+            currentMatrix = calculateInverse(matrix);
         } else if (['+', '-', '*'].includes(token)) {
             currentOp = token;
+            continue;
+        } else {
+            throw new Error(`Invalid token: ${token}`);
+        }
+
+        if (!result) {
+            result = currentMatrix;
+            displayStep(calculationSteps, `Step ${i + 1}: Start with ${token}`, currentMatrix);
+        } else {
+            switch (currentOp) {
+                case '+': 
+                    result = addMatrices(result, currentMatrix);
+                    displayStep(calculationSteps, `Step ${i + 1}: Add ${token}`, result);
+                    break;
+                case '-': 
+                    result = subtractMatrices(result, currentMatrix);
+                    displayStep(calculationSteps, `Step ${i + 1}: Subtract ${token}`, result);
+                    break;
+                case '*': 
+                    result = multiplyMatrices(result, currentMatrix);
+                    displayStep(calculationSteps, `Step ${i + 1}: Multiply by ${token}`, result);
+                    break;
+            }
         }
     }
 
     return result;
 }
+
 
 function displayStep(container, stepText, matrix) {
     const stepDiv = document.createElement('div');
