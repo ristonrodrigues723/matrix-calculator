@@ -11,6 +11,7 @@ function initializeMatrixInputs() {
             <label>Rows: <input type="number" id="rows_${letter}" min="1" max="5" value="2"></label>
             <label>Columns: <input type="number" id="cols_${letter}" min="1" max="5" value="2"></label>
             <button onclick="createMatrixGrid('${letter}')">Create Matrix</button>
+            <button onclick="addInvertedMatrix('${letter}')">Add Inverted</button>
             <div id="matrix_${letter}"></div>
         `;
         container.appendChild(div);
@@ -22,6 +23,14 @@ function initializeMatrixInputs() {
         <button onclick="addIdentityMatrix(3)">Add 3x3 Identity</button>
     `;
     container.appendChild(identityDiv);
+
+    // Add inversion button
+    const inversionDiv = document.createElement('div');
+    inversionDiv.innerHTML = `
+        <h3>Matrix Inversion</h3>
+        <button onclick="addInversionFunction()">Add inv()</button>
+    `;
+    container.appendChild(inversionDiv);
 }
 
 function createMatrixGrid(letter) {
@@ -78,14 +87,6 @@ function calculateResult() {
             matrices[letter] = getMatrixValues(letter);
         }
     });
-    
-    // Add identity matrices if they're in the equation
-    if (equation.includes('I2')) {
-        matrices['I2'] = createIdentityMatrix(2);
-    }
-    if (equation.includes('I3')) {
-        matrices['I3'] = createIdentityMatrix(3);
-    }
 
     try {
         const result = evaluateEquation(equation);
@@ -95,11 +96,37 @@ function calculateResult() {
     }
 }
 
+function addInvertedMatrix(letter) {
+    const matrix = getMatrixValues(letter);
+    const size = Math.sqrt(matrix.length);
+    if (size !== 2 && size !== 3) {
+        alert('Only 2x2 and 3x3 matrices can be inverted');
+        return;
+    }
+    
+    try {
+        const inverted = invertMatrix(matrix);
+        const invertedSymbol = `inv(${letter})`;
+        matrices[invertedSymbol] = inverted;
+        
+        const equation = document.getElementById('equation');
+        equation.value += (equation.value ? ' * ' : '') + invertedSymbol;
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+function addInversionFunction() {
+    const equation = document.getElementById('equation');
+    equation.value += (equation.value ? ' * ' : '') + 'inv()';
+    // Move cursor inside parentheses
+    equation.setSelectionRange(equation.value.length - 1, equation.value.length - 1);
+    equation.focus();
+}
+
 function evaluateEquation(equation) {
-    const tokens = equation.match(/[A-C]|I[23]|\+|\*|-/g);
+    const tokens = equation.match(/[A-C]|inv\([A-C]\)|I[23]|\+|\*|-/g);
     let result = null;
     let currentOp = '+';
-    
 
     const calculationSteps = document.getElementById('calculationSteps');
     calculationSteps.innerHTML = '';
@@ -115,15 +142,40 @@ function evaluateEquation(equation) {
                 switch (currentOp) {
                     case '+': 
                         result = addMatrices(result, matrix); 
-                        displayStep(calculationSteps, `Step ${i}: Add Matrix ${token}`, result);
+                        displayStep(calculationSteps, `Step ${i + 1}: Add Matrix ${token}`, result);
                         break;
                     case '-': 
                         result = subtractMatrices(result, matrix); 
-                        displayStep(calculationSteps, `Step ${i}: Subtract Matrix ${token}`, result);
+                        displayStep(calculationSteps, `Step ${i + 1}: Subtract Matrix ${token}`, result);
                         break;
                     case '*': 
                         result = multiplyMatrices(result, matrix); 
-                        displayStep(calculationSteps, `Step ${i}: Multiply by Matrix ${token}`, result);
+                        displayStep(calculationSteps, `Step ${i + 1}: Multiply by Matrix ${token}`, result);
+                        break;
+                }
+            }
+        } else if (token.startsWith('inv(') && token.endsWith(')')) {
+            const matrixLetter = token.charAt(4);
+            if (!(matrixLetter in matrices)) {
+                throw new Error(`Matrix ${matrixLetter} is not defined`);
+            }
+            const matrix = invertMatrix(matrices[matrixLetter]);
+            if (!result) {
+                result = matrix;
+                displayStep(calculationSteps, `Step ${i + 1}: Start with Inverse of Matrix ${matrixLetter}`, matrix);
+            } else {
+                switch (currentOp) {
+                    case '+': 
+                        result = addMatrices(result, matrix); 
+                        displayStep(calculationSteps, `Step ${i + 1}: Add Inverse of Matrix ${matrixLetter}`, result);
+                        break;
+                    case '-': 
+                        result = subtractMatrices(result, matrix); 
+                        displayStep(calculationSteps, `Step ${i + 1}: Subtract Inverse of Matrix ${matrixLetter}`, result);
+                        break;
+                    case '*': 
+                        result = multiplyMatrices(result, matrix); 
+                        displayStep(calculationSteps, `Step ${i + 1}: Multiply by Inverse of Matrix ${matrixLetter}`, result);
                         break;
                 }
             }
@@ -202,6 +254,30 @@ function displayResult(result) {
     });
     html += '</div>';
     resultDiv.innerHTML = html;
+}
+
+function calculateResult() {
+    const equation = document.getElementById('equation').value;
+    matrixLetters.forEach(letter => {
+        if (equation.includes(letter)) {
+            matrices[letter] = getMatrixValues(letter);
+        }
+    });
+    
+    // Add identity matrices if they're in the equation
+    if (equation.includes('I2')) {
+        matrices['I2'] = createIdentityMatrix(2);
+    }
+    if (equation.includes('I3')) {
+        matrices['I3'] = createIdentityMatrix(3);
+    }
+
+    try {
+        const result = evaluateEquation(equation);
+        displayResult(result);
+    } catch (error) {
+        document.getElementById('result').textContent = 'Error: ' + error.message;
+    }
 }
 
 initializeMatrixInputs();
